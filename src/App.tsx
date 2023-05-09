@@ -13,6 +13,7 @@ function App() {
       <Routes>
           <Route index element={<Login setToken={setToken} />}/>
           <Route path='/posts' element={<AllBlogPosts token={token}/>}/>
+          <Route path='/posts/create-post' element={<PostForm token={token}/>}/>
           <Route path='/posts/:postid' element={<PostForm token={token}/>}/>
       </Routes>
     </BrowserRouter>
