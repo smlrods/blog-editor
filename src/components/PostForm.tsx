@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { v4 as uuidv4 } from 'uuid';
+import { decode } from 'html-entities';
 import {
   Container,
   Typography,
@@ -8,8 +10,15 @@ import {
   Switch,
   Snackbar,
   Alert,
+  Card,
+  CardContent,
+  Divider,
+  Skeleton,
+  IconButton,
+  CardActions
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { useNavigate, useParams } from 'react-router-dom';
 
 const Form = styled('form')(({ theme }) => ({
@@ -26,6 +35,10 @@ const SubmitButton = styled(Button)(({ theme }) => ({
   marginTop: theme.spacing(2),
 }));
 
+const DeleteButton = styled(IconButton)({
+  marginLeft: 'auto',
+});
+
 const ToggleContainer = styled('div')(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
@@ -36,7 +49,31 @@ const ToggleLabel = styled(FormControlLabel)(({ theme }) => ({
   marginLeft: theme.spacing(1),
 }));
 
+const CommentCardWrapper = styled(Card)({
+  marginBottom: '16px',
+  position: 'relative'
+});
+
+const CommentCardContent = styled(CardContent)({
+  paddingBottom: '8px',
+});
+
+const CardActionsContainer = styled(CardActions)({
+  position: 'absolute',
+  bottom: 0,
+  right: 0,
+});
+
 import { PostType } from './AllPosts';
+
+interface CommentType {
+  _id?: string;
+  email: string;
+  name: string;
+  comment: string;
+  timestamp?: string;
+  post?: string
+}
 
 const PostForm = ({ token }: { token: string | undefined }) => {
   const [title, setTitle] = useState('');
@@ -45,6 +82,43 @@ const PostForm = ({ token }: { token: string | undefined }) => {
   const [snackBar, setSnackBar] = useState({ open: false, msg: "", error: false });
   const params = useParams();
   const navigate = useNavigate();
+  const [comments, setComments] = useState<CommentType[]>(Array(3).fill(null));
+
+  const getComments = async (postid: string | undefined) => {
+    const response = await fetch(`https://blog-api-production-c132.up.railway.app/post/${postid}/comments`);
+    const newComments: CommentType[] = await response.json();
+    setComments(newComments);
+  }
+
+  const handleDeleteComment = async (commentid: string | undefined ) => {
+    const res = await fetch(
+      `https://blog-api-production-c132.up.railway.app/comment/${commentid}/`,
+      {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}` 
+        },
+      }
+    );
+
+    if (res.status == 200) {
+      setSnackBar({
+        open: true,
+        msg: "The comment has been deleted",
+        error: false
+      });
+      getComments(params.postid);
+      return;
+    }
+
+    setSnackBar({
+      open: true,
+      msg: "The comment has not been deleted",
+      error: true
+    });
+    return;
+  }
 
   const handleSubmit = async (event: any) => {
     event.preventDefault();
@@ -140,6 +214,7 @@ const PostForm = ({ token }: { token: string | undefined }) => {
 
     if (params.postid) {
       getPost(params.postid);
+      getComments(params.postid);
     }
   }, [token]);
 
@@ -197,6 +272,53 @@ const PostForm = ({ token }: { token: string | undefined }) => {
           {!params.postid ? "Create" : "Update"}
         </SubmitButton>
       </Form>
+      {/* Comments section */}
+      { params.postid ?
+      (<Container maxWidth="md" sx={{ pt: 4 }}>
+        <Typography gutterBottom variant="h5" component="h2">
+          Comments
+        </Typography>
+        <Divider sx={{ mb: 2 }} />
+        {/* Map through comments and display each one */}
+        {comments.map((comment: CommentType) => {
+          if (comment) {
+            return (
+              <CommentCardWrapper key={comment._id}>
+                <CommentCardContent>
+                  <Typography variant="subtitle1" component="h4">
+                    {decode(comment.name)}
+                  </Typography>
+                  <Typography variant="subtitle2" component="h5" color="textSecondary" gutterBottom>
+                    {comment.email}
+                  </Typography>
+                  <Typography variant="body2" component="p">
+                    {decode(comment.comment)}
+                  </Typography>
+                </CommentCardContent>
+                <CardActionsContainer className="cardActions">
+                  <DeleteButton
+                    aria-label="delete post"
+                    onClick={() => handleDeleteComment(comment._id)}
+                  >
+                    <DeleteIcon />
+                  </DeleteButton>
+                </CardActionsContainer>
+              </CommentCardWrapper>
+            );
+          }
+
+          return (
+            <CommentCardWrapper key={uuidv4()}>
+              <Skeleton 
+                key={uuidv4()}
+                variant='rectangular'
+                height={100}
+              />
+            </CommentCardWrapper>
+          );
+        })}
+      </Container>) : null
+    }
     </Container>
   );
 };
