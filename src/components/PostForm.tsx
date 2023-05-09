@@ -42,7 +42,6 @@ const PostForm = ({ token }: { token: string | undefined }) => {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [published, setPublished] = useState(false);
-  const [post, setPost] = useState<PostType>();
   const [snackBar, setSnackBar] = useState({ open: false, msg: "", error: false });
   const params = useParams();
   const navigate = useNavigate();
@@ -131,7 +130,6 @@ const PostForm = ({ token }: { token: string | undefined }) => {
     setTitle(data.title);
     setBody(data.content);
     setPublished(data.published);
-    setPost(data);
   }
 
   useEffect(() => {
